@@ -47,11 +47,35 @@ namespace AutoUpdater {
         return strtoull(valStr.c_str(), nullptr, 10);
     }
 
+    inline void ParseOffsets(const std::string& offsetsData, const std::string& buttonsData, bool& ok) {
+        if (offsetsData.empty()) return;
+
+        Offsets::dwEntityList = FindJSONVal(offsetsData, "dwEntityList");
+        Offsets::dwLocalPlayerController = FindJSONVal(offsetsData, "dwLocalPlayerController");
+        Offsets::dwLocalPlayerPawn = FindJSONVal(offsetsData, "dwLocalPlayerPawn");
+        Offsets::dwViewMatrix = FindJSONVal(offsetsData, "dwViewMatrix");
+        Offsets::dwGlobalVars = FindJSONVal(offsetsData, "dwGlobalVars");
+        Offsets::dwPlantedC4 = FindJSONVal(offsetsData, "dwPlantedC4");
+        Offsets::dwSensitivity = FindJSONVal(offsetsData, "dwSensitivity");
+        Offsets::dwSensitivity_sensitivity = FindJSONVal(offsetsData, "dwSensitivity_sensitivity");
+        Offsets::dwViewAngles = FindJSONVal(offsetsData, "dwViewAngles");
+        Offsets::dwNetworkGameClient = FindJSONVal(offsetsData, "dwNetworkGameClient");
+        Offsets::dwNetworkGameClient_signOnState = FindJSONVal(offsetsData, "dwNetworkGameClient_signOnState");
+        Offsets::dwNetworkGameClient_deltaTick = FindJSONVal(offsetsData, "dwNetworkGameClient_deltaTick");
+        Offsets::dwBuildNumber = FindJSONVal(offsetsData, "dwBuildNumber");
+
+        if (!buttonsData.empty()) {
+            Offsets::dwAttack = FindJSONVal(buttonsData, "attack");
+            Offsets::dwJump = FindJSONVal(buttonsData, "jump");
+        }
+
+        ok = (Offsets::dwEntityList != 0 && Offsets::dwLocalPlayerController != 0);
+    }
+
     inline bool UpdateOffsets(HMODULE hModule) {
         std::string offsetsData, buttonsData;
         bool ok = false;
 
-        // Log helper
         HANDLE hFile = CreateFileA("C:\\dll_log.txt", FILE_APPEND_DATA, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
         auto LogMsg = [&](const char* msg) {
             if (hFile != INVALID_HANDLE_VALUE) {
@@ -74,32 +98,7 @@ namespace AutoUpdater {
         WinHttpCloseHandle(hConnect);
         WinHttpCloseHandle(hSession);
 
-        __try {
-            if (offsetsData.empty()) { if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile); return false; }
-
-            Offsets::dwEntityList = FindJSONVal(offsetsData, "dwEntityList");
-            Offsets::dwLocalPlayerController = FindJSONVal(offsetsData, "dwLocalPlayerController");
-            Offsets::dwLocalPlayerPawn = FindJSONVal(offsetsData, "dwLocalPlayerPawn");
-            Offsets::dwViewMatrix = FindJSONVal(offsetsData, "dwViewMatrix");
-            Offsets::dwGlobalVars = FindJSONVal(offsetsData, "dwGlobalVars");
-            Offsets::dwPlantedC4 = FindJSONVal(offsetsData, "dwPlantedC4");
-            Offsets::dwSensitivity = FindJSONVal(offsetsData, "dwSensitivity");
-            Offsets::dwSensitivity_sensitivity = FindJSONVal(offsetsData, "dwSensitivity_sensitivity");
-            Offsets::dwViewAngles = FindJSONVal(offsetsData, "dwViewAngles");
-            Offsets::dwNetworkGameClient = FindJSONVal(offsetsData, "dwNetworkGameClient");
-            Offsets::dwNetworkGameClient_signOnState = FindJSONVal(offsetsData, "dwNetworkGameClient_signOnState");
-            Offsets::dwNetworkGameClient_deltaTick = FindJSONVal(offsetsData, "dwNetworkGameClient_deltaTick");
-            Offsets::dwBuildNumber = FindJSONVal(offsetsData, "dwBuildNumber");
-
-            if (!buttonsData.empty()) {
-                Offsets::dwAttack = FindJSONVal(buttonsData, "attack");
-                Offsets::dwJump = FindJSONVal(buttonsData, "jump");
-            }
-
-            ok = (Offsets::dwEntityList != 0 && Offsets::dwLocalPlayerController != 0);
-        } __except(EXCEPTION_EXECUTE_HANDLER) {
-            ok = false;
-        }
+        ParseOffsets(offsetsData, buttonsData, ok);
 
         if (ok) {
             char logBuf[512];
