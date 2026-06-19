@@ -48,28 +48,34 @@ namespace AutoUpdater {
     }
 
     inline bool UpdateOffsets(HMODULE hModule) {
-        __try {
-            HANDLE hFile = CreateFileA("C:\\dll_log.txt", FILE_APPEND_DATA, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        std::string offsetsData, buttonsData;
+        bool ok = false;
+
+        // Log helper
+        HANDLE hFile = CreateFileA("C:\\dll_log.txt", FILE_APPEND_DATA, FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        auto LogMsg = [&](const char* msg) {
             if (hFile != INVALID_HANDLE_VALUE) {
-                const char* msg = "[AU] Downloading offsets from a2x/cs2-dumper...\r\n";
                 DWORD written;
                 WriteFile(hFile, msg, (DWORD)strlen(msg), &written, NULL);
-                CloseHandle(hFile);
             }
+        };
 
-            HINTERNET hSession = WinHttpOpen(L"CS2 Internal/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, NULL, NULL, 0);
-            if (!hSession) return false;
+        LogMsg("[AU] Downloading offsets from a2x/cs2-dumper...\r\n");
 
-            HINTERNET hConnect = WinHttpConnect(hSession, L"raw.githubusercontent.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
-            if (!hConnect) { WinHttpCloseHandle(hSession); return false; }
+        HINTERNET hSession = WinHttpOpen(L"CS2 Internal/1.0", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, NULL, NULL, 0);
+        if (!hSession) { if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile); return false; }
 
-            std::string offsetsData = FetchURL(hConnect, L"/a2x/cs2-dumper/main/output/offsets.json");
-            if (offsetsData.empty()) { WinHttpCloseHandle(hConnect); WinHttpCloseHandle(hSession); return false; }
+        HINTERNET hConnect = WinHttpConnect(hSession, L"raw.githubusercontent.com", INTERNET_DEFAULT_HTTPS_PORT, 0);
+        if (!hConnect) { WinHttpCloseHandle(hSession); if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile); return false; }
 
-            std::string buttonsData = FetchURL(hConnect, L"/a2x/cs2-dumper/main/output/buttons.json");
+        offsetsData = FetchURL(hConnect, L"/a2x/cs2-dumper/main/output/offsets.json");
+        buttonsData = FetchURL(hConnect, L"/a2x/cs2-dumper/main/output/buttons.json");
 
-            WinHttpCloseHandle(hConnect);
-            WinHttpCloseHandle(hSession);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
+
+        __try {
+            if (offsetsData.empty()) { if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile); return false; }
 
             Offsets::dwEntityList = FindJSONVal(offsetsData, "dwEntityList");
             Offsets::dwLocalPlayerController = FindJSONVal(offsetsData, "dwLocalPlayerController");
@@ -90,21 +96,21 @@ namespace AutoUpdater {
                 Offsets::dwJump = FindJSONVal(buttonsData, "jump");
             }
 
-            bool success = (Offsets::dwEntityList != 0 && Offsets::dwLocalPlayerController != 0);
-
-            if (hFile != INVALID_HANDLE_VALUE) {
-                char logBuf[512];
-                sprintf_s(logBuf, "[AU] EntList: %llX, LocCtrl: %llX, ViewMat: %llX | %s\r\n",
-                    Offsets::dwEntityList, Offsets::dwLocalPlayerController, Offsets::dwViewMatrix,
-                    success ? "OK" : "FAIL");
-                WriteFile(hFile, logBuf, (DWORD)strlen(logBuf), &written, NULL);
-                CloseHandle(hFile);
-            }
-
-            return success;
-
+            ok = (Offsets::dwEntityList != 0 && Offsets::dwLocalPlayerController != 0);
         } __except(EXCEPTION_EXECUTE_HANDLER) {
-            return false;
+            ok = false;
         }
+
+        if (ok) {
+            char logBuf[512];
+            sprintf_s(logBuf, "[AU] EntList: %llX, LocCtrl: %llX, ViewMat: %llX | OK\r\n",
+                Offsets::dwEntityList, Offsets::dwLocalPlayerController, Offsets::dwViewMatrix);
+            LogMsg(logBuf);
+        } else {
+            LogMsg("[AU] EntList: FAIL\r\n");
+        }
+
+        if (hFile != INVALID_HANDLE_VALUE) CloseHandle(hFile);
+        return ok;
     }
 }

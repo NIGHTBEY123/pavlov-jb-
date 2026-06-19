@@ -87,6 +87,25 @@ public:
     float GetFlashDuration() const {
         return Memory::Read<float>(Address + Offsets::C_CSPlayerPawnBase::m_flFlashDuration);
     }
+
+    int GetShotsFired() const {
+        return Memory::Read<int>(Address + Offsets::C_CSPlayerPawn::m_iShotsFired);
+    }
+
+    Vec3 GetAimPunchAngle() const {
+        uintptr_t svc = Memory::Read<uintptr_t>(Address + Offsets::C_CSPlayerPawn::m_pAimPunchServices);
+        if (!svc) return {};
+        return Memory::Read<Vec3>(svc + Offsets::AimPunchServices::m_predictableBaseAngle);
+    }
+
+    uintptr_t GetWeaponServices() const {
+        return Memory::Read<uintptr_t>(Address + Offsets::C_BasePlayerPawn::m_pWeaponServices);
+    }
+
+    void GetClassName(char* out, int maxLen) const {
+        if (!Address || maxLen <= 0) { if (maxLen > 0) out[0] = 0; return; }
+        out[0] = 0;
+    }
 };
 
 inline uintptr_t GetLocalPlayerPawn(uintptr_t clientBase) {

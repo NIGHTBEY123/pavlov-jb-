@@ -26,6 +26,12 @@ namespace DX11Hook {
 
     inline void RenderCallback();
 
+    inline LRESULT __stdcall WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+        if (menuVisible && ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+            return 1;
+        return CallWindowProcA(originalWndProc, hWnd, msg, wParam, lParam);
+    }
+
     inline HRESULT __stdcall HookedPresent(IDXGISwapChain* pSwapChain, UINT syncInterval, UINT flags) {
         if (!d3dDevice) {
             swapChain = pSwapChain;
@@ -51,11 +57,7 @@ namespace DX11Hook {
             ImGui_ImplWin32_Init(gameWindow);
             ImGui_ImplDX11_Init(d3dDevice, d3dContext);
 
-            originalWndProc = (WNDPROC)SetWindowLongPtrA(gameWindow, GWLP_WNDPROC, (LONG_PTR)[](HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT {
-                if (menuVisible && ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-                    return 1;
-                return CallWindowProcA(originalWndProc, hWnd, msg, wParam, lParam);
-            });
+            originalWndProc = (WNDPROC)SetWindowLongPtrA(gameWindow, GWLP_WNDPROC, (LONG_PTR)WndProcHandler);
         }
 
         if (d3dDevice && d3dContext && mainRT) {

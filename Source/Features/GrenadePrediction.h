@@ -21,6 +21,15 @@ namespace GrenadePrediction {
         int type;
     };
 
+    inline bool WorldToScreen(const Vec3& world, Vec2& screen, const ViewMatrix& vm, int screenW, int screenH) {
+        float w = vm.matrix[3][0] * world.x + vm.matrix[3][1] * world.y + vm.matrix[3][2] * world.z + vm.matrix[3][3];
+        if (w < 0.001f) return false;
+        float invW = 1.0f / w;
+        screen.x = (screenW * 0.5f) + (vm.matrix[0][0] * world.x + vm.matrix[0][1] * world.y + vm.matrix[0][2] * world.z + vm.matrix[0][3]) * invW * (screenW * 0.5f);
+        screen.y = (screenH * 0.5f) - (vm.matrix[1][0] * world.x + vm.matrix[1][1] * world.y + vm.matrix[1][2] * world.z + vm.matrix[1][3]) * invW * (screenH * 0.5f);
+        return true;
+    }
+
     inline void Render(ImDrawList* dl, uintptr_t localPawn, uintptr_t clientBase, const ViewMatrix& vm, int screenW, int screenH) {
         if (!enabled || !dl || !localPawn) return;
 
@@ -95,13 +104,3 @@ namespace GrenadePrediction {
             prevPos = proj.pos;
         }
     }
-
-    inline bool WorldToScreen(const Vec3& world, Vec2& screen, const ViewMatrix& vm, int screenW, int screenH) {
-        float w = vm.matrix[3][0] * world.x + vm.matrix[3][1] * world.y + vm.matrix[3][2] * world.z + vm.matrix[3][3];
-        if (w < 0.001f) return false;
-        float invW = 1.0f / w;
-        screen.x = (screenW * 0.5f) + (vm.matrix[0][0] * world.x + vm.matrix[0][1] * world.y + vm.matrix[0][2] * world.z + vm.matrix[0][3]) * invW * (screenW * 0.5f);
-        screen.y = (screenH * 0.5f) - (vm.matrix[1][0] * world.x + vm.matrix[1][1] * world.y + vm.matrix[1][2] * world.z + vm.matrix[1][3]) * invW * (screenH * 0.5f);
-        return true;
-    }
-}
